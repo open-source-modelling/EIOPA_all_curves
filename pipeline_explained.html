@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EIOPA RFR Extraction Pipeline — How It Works</title>
+<style>
+  :root{
+    --paper:#F6F4EE;
+    --paper-line:#DCD7C9;
+    --ink:#1E2A3A;
+    --ink-soft:#51606F;
+    --rule:#C9C2AE;
+    --teal:#2F6F62;
+    --teal-soft:#E4EEEA;
+    --amber:#B8791F;
+    --amber-soft:#F4E9D6;
+    --code-bg:#1E2A3A;
+    --code-ink:#E7E9EC;
+    --code-accent:#8FD6C4;
+    --code-string:#E3B778;
+    --code-comment:#7C8B9A;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans","Segoe UI",Arial,sans-serif;
+    font-size:16px;
+    line-height:1.6;
+  }
+  a{color:var(--teal);}
+
+  /* ---------- Layout ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:260px minmax(0,780px);
+    justify-content:center;
+    gap:56px;
+    max-width:1180px;
+    margin:0 auto;
+    padding:64px 24px 120px;
+  }
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr; gap:32px; padding:32px 20px 80px;}
+    .toc{position:static !important; order:2;}
+  }
+
+  /* ---------- Sidebar TOC ---------- */
+  .toc{
+    position:sticky;
+    top:48px;
+    align-self:start;
+    font-family:"IBM Plex Mono",Consolas,monospace;
+    font-size:13px;
+  }
+  .toc .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--ink-soft);
+    font-size:11px;
+    margin-bottom:14px;
+  }
+  .toc ol{list-style:none; margin:0; padding:0;}
+  .toc li{margin-bottom:2px;}
+  .toc a{
+    display:flex; gap:10px;
+    text-decoration:none;
+    color:var(--ink-soft);
+    padding:6px 8px;
+    border-radius:3px;
+  }
+  .toc a:hover{background:var(--teal-soft); color:var(--teal);}
+  .toc .n{color:var(--teal); min-width:1.4em;}
+
+  /* ---------- Header ---------- */
+  .masthead{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:20px;
+    margin-bottom:44px;
+  }
+  .masthead .kicker{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:10px;
+  }
+  h1{
+    font-size:33px;
+    margin:0 0 10px;
+    letter-spacing:-.01em;
+  }
+  .masthead p{
+    color:var(--ink-soft);
+    max-width:60ch;
+    margin:0;
+  }
+  .file-tags{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-top:18px;
+  }
+  .file-tags span{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12px;
+    background:#fff;
+    border:1px solid var(--rule);
+    padding:4px 9px;
+    border-radius:3px;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- Sections ---------- */
+  section{
+    margin-bottom:56px;
+    scroll-margin-top:32px;
+  }
+  .step-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:10px;
+    margin-bottom:18px;
+  }
+  .step-head .num{
+    font-family:"IBM Plex Mono",monospace;
+    color:var(--teal);
+    font-size:14px;
+    background:var(--teal-soft);
+    border-radius:4px;
+    padding:2px 8px;
+  }
+  .step-head h2{
+    margin:0;
+    font-size:21px;
+  }
+  .step-head .file{
+    margin-left:auto;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+
+  p{margin:0 0 14px;}
+  ul, ol.plain{margin:0 0 14px; padding-left:22px;}
+  li{margin-bottom:6px;}
+
+  code.inline{
+    font-family:"IBM Plex Mono",monospace;
+    background:var(--teal-soft);
+    color:#1a4a40;
+    padding:1px 5px;
+    border-radius:3px;
+    font-size:.92em;
+  }
+
+  pre{
+    background:var(--code-bg);
+    color:var(--code-ink);
+    padding:16px 18px;
+    border-radius:6px;
+    overflow-x:auto;
+    font-family:"IBM Plex Mono",Consolas,monospace;
+    font-size:13px;
+    line-height:1.55;
+    margin:0 0 14px;
+  }
+  pre .c{color:var(--code-comment); font-style:italic;}
+  pre .s{color:var(--code-string);}
+  pre .k{color:var(--code-accent);}
+
+  .callout{
+    display:flex; gap:12px;
+    background:var(--amber-soft);
+    border-left:3px solid var(--amber);
+    padding:12px 16px;
+    border-radius:0 4px 4px 0;
+    margin:0 0 16px;
+    font-size:14.5px;
+  }
+  .callout b{color:var(--amber);}
+
+  .found-it{
+    display:flex; gap:12px;
+    background:var(--teal-soft);
+    border-left:3px solid var(--teal);
+    padding:12px 16px;
+    border-radius:0 4px 4px 0;
+    margin:0 0 16px;
+    font-size:14.5px;
+  }
+  .found-it b{color:var(--teal);}
+
+  table{
+    border-collapse:collapse;
+    width:100%;
+    margin:0 0 16px;
+    font-size:14px;
+  }
+  th,td{
+    border-bottom:1px solid var(--paper-line);
+    text-align:left;
+    padding:7px 10px;
+  }
+  th{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+  }
+  td code{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:13px;
+  }
+
+  /* ---------- Flow diagram ---------- */
+  .flow{
+    display:flex;
+    align-items:stretch;
+    flex-wrap:wrap;
+    gap:0;
+    margin:0 0 20px;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12.5px;
+  }
+  .flow .box{
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:5px;
+    padding:12px 14px;
+    flex:1 1 150px;
+    min-width:140px;
+  }
+  .flow .box.accent{border-color:var(--teal); background:var(--teal-soft);}
+  .flow .box .t{font-weight:600; color:var(--ink); margin-bottom:4px; font-size:13px;}
+  .flow .box .d{color:var(--ink-soft); font-size:11.5px; line-height:1.4;}
+  .flow .arrow{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--rule); font-size:20px; padding:0 6px;
+    flex:0 0 auto;
+  }
+  @media (max-width:640px){
+    .flow{flex-direction:column;}
+    .flow .arrow{transform:rotate(90deg); padding:6px 0;}
+  }
+
+  footer{
+    border-top:1px solid var(--rule);
+    padding-top:20px;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="toc">
+    <div class="eyebrow">Contents</div>
+    <ol>
+      <li><a href="#overview"><span class="n">·</span>Overview</a></li>
+      <li><a href="#step1"><span class="n">01</span>config.py</a></li>
+      <li><a href="#step2"><span class="n">02</span>qb_extractor.py</a></li>
+      <li><a href="#step3"><span class="n">03</span>param_extractor.py</a></li>
+      <li><a href="#step4"><span class="n">04</span>csv_store.py</a></li>
+      <li><a href="#step5"><span class="n">05</span>main.py</a></li>
+      <li><a href="#gotchas"><span class="n">·</span>Gotchas found</a></li>
+      <li><a href="#outputs"><span class="n">·</span>Output files</a></li>
+      <li><a href="#run"><span class="n">·</span>Running it</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="masthead">
+      <div class="kicker">Code walkthrough</div>
+      <h1>How the EIOPA RFR extraction pipeline works</h1>
+      <p>A step-by-step explanation of each file in the pipeline: what it reads, what it does to it, and why it's built the way it is. Written against the November 2024 EIOPA risk-free rate files.</p>
+      <div class="file-tags">
+        <span>config.py</span>
+        <span>extractors/qb_extractor.py</span>
+        <span>extractors/param_extractor.py</span>
+        <span>csv_store.py</span>
+        <span>main.py</span>
+      </div>
+    </div>
+
+    <section id="overview">
+      <div class="step-head">
+        <h2>Overview</h2>
+      </div>
+      <p>EIOPA publishes two workbooks every month: one with the Smith‑Wilson <code class="inline">Qb</code> calibration vectors, one with the resulting term structures and the parameters used to build them. Both follow the same filename pattern and both repeat the same per‑country block layout across dozens of columns — good for a human reading it in Excel, awkward for anything downstream. The pipeline turns both into flat CSV tables that keep growing, one month at a time.</p>
+      <div class="flow">
+        <div class="box"><div class="t">Qb_SW.xlsx</div><div class="d">Smith‑Wilson Qb vectors, 2 sheets (no‑VA / with‑VA)</div></div>
+        <div class="arrow">→</div>
+        <div class="box accent"><div class="t">qb_extractor.py</div><div class="d">finds each country's block, walks it down to a long table</div></div>
+        <div class="arrow">→</div>
+        <div class="box"><div class="t">qb_vectors.csv</div><div class="d">date · curve · country · term · value</div></div>
+      </div>
+      <div class="flow">
+        <div class="box"><div class="t">Term_Structures.xlsx</div><div class="d">RFR_spot sheets, 6 fixed parameter rows per country</div></div>
+        <div class="arrow">→</div>
+        <div class="box accent"><div class="t">param_extractor.py</div><div class="d">reads the 7 parameter rows for every country column</div></div>
+        <div class="arrow">→</div>
+        <div class="box"><div class="t">curve_parameters.csv</div><div class="d">date · curve · country · alpha, UFR, CRA, VA…</div></div>
+      </div>
+      <p><code class="inline">main.py</code> ties both extractors together, pulls the reference date out of the filename, and hands the result to <code class="inline">csv_store.py</code>, which merges it into the running CSVs without creating duplicates if you run the same month twice.</p>
+    </section>
+
+    <section id="step1">
+      <div class="step-head">
+        <span class="num">01</span><h2>Reading the filename</h2>
+        <span class="file">config.py</span>
+      </div>
+      <p>EIOPA's own filenames already tell you the reference date: <code class="inline">EIOPA_RFR_20241130_Qb_SW.xlsx</code>. Rather than ask the user to type the date in separately (and risk it not matching the file), <code class="inline">config.py</code> pulls it straight out with a regex:</p>
+<pre>FILENAME_DATE_RE = re.compile(r<span class="s">"EIOPA_RFR_(\d{8})_"</span>)
+
+<span class="k">def</span> extract_reference_date(filename):
+    m = FILENAME_DATE_RE.search(Path(filename).name)
+    <span class="k">if not</span> m:
+        <span class="k">raise</span> ValueError(<span class="s">f"no EIOPA_RFR_YYYYMMDD_ stamp in {filename}"</span>)
+    raw = m.group(1)
+    <span class="k">return</span> <span class="s">f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"</span>  <span class="c"># -> "2024-11-30"</span></pre>
+      <p>If a file doesn't match the pattern — wrong name, wrong folder, a stray copy — this raises immediately instead of silently tagging the data with the wrong month. This module also just holds the shared output paths (<code class="inline">data/qb_vectors.csv</code>, <code class="inline">data/curve_parameters.csv</code>) so every other file agrees on where things live.</p>
+    </section>
+
+    <section id="step2">
+      <div class="step-head">
+        <span class="num">02</span><h2>Extracting the Qb vectors</h2>
+        <span class="file">extractors/qb_extractor.py</span>
+      </div>
+      <p>The workbook has two sheets, <code class="inline">SW_Qb_no_VA</code> and <code class="inline">SW_Qb_with_VA</code>. Inside each, one header row holds a run of country codes (<code class="inline">EUR, AT, BE, BG …</code>), and every country owns a 3‑column block: a term‑index column, a value column, and a blank spacer column.</p>
+      <table>
+        <tr><th>Col</th><th>Col+1</th><th>Col+2</th></tr>
+        <tr><td><code>1, 2, 3 …</code> (term index)</td><td><code>‑11.43, 8.10 …</code> (Qb value)</td><td><em>blank spacer</em></td></tr>
+      </table>
+      <p>Step by step, the extractor:</p>
+      <ol class="plain">
+        <li><b>Finds the header row</b> by scanning the first 25 rows for the one where more than a handful of cells hold short text labels (2–4 characters) — that's the row of country codes, wherever EIOPA happens to have put it that month.</li>
+        <li><b>Maps every country to its value column</b> by re‑reading that header row: any cell holding text is a country, and its column number is the "value column" for that block.</li>
+        <li><b>Walks down each column</b> starting the row after the header, reading (term index, value) pairs until it hits a row where both are empty — that's the end of that country's data.</li>
+        <li><b>Stacks every country, from both sheets</b>, into one long table with columns <code class="inline">reference_date, curve_type, country, term_index, qb_value</code>.</li>
+      </ol>
+<pre><span class="k">def</span> _extract_sheet(ws, curve_type, reference_date):
+    header_row = _find_header_row(ws)
+    country_cols = {c: ws.cell(row=header_row, column=c).value
+                     <span class="k">for</span> c <span class="k">in</span> range(1, ws.max_column + 1)
+                     <span class="k">if</span> isinstance(ws.cell(row=header_row, column=c).value, str)}
+
+    <span class="k">for</span> value_col, country <span class="k">in</span> country_cols.items():
+        index_col = value_col - 1
+        r = header_row + 1
+        <span class="k">while</span> <span class="k">True</span>:
+            term_index = ws.cell(row=r, column=index_col).value
+            qb_value   = ws.cell(row=r, column=value_col).value
+            <span class="k">if</span> term_index <span class="k">is</span> <span class="k">None</span> <span class="k">and</span> qb_value <span class="k">is</span> <span class="k">None</span>:
+                <span class="k">break</span>
+            <span class="c"># ...append the row, r += 1</span></pre>
+      <div class="found-it">
+        <b>Design choice —</b> <code class="inline">term_index</code> is kept as a <b>float</b>, not an int. Most countries index by whole years (1, 2, 3…), but Australia, Canada, China, Hong Kong, Mexico, New Zealand, Singapore, South Africa, South Korea and Thailand step in <b>half‑years</b> (0.5, 1, 1.5, 2…) because of their coupon frequency. Rounding to int would collide 0.5 and 1.0 into the same row.
+      </div>
+    </section>
+
+    <section id="step3">
+      <div class="step-head">
+        <span class="num">03</span><h2>Extracting the curve parameters</h2>
+        <span class="file">extractors/param_extractor.py</span>
+      </div>
+      <p>The <code class="inline">Term_Structures.xlsx</code> workbook lays out its <code class="inline">RFR_spot_no_VA</code> / <code class="inline">RFR_spot_with_VA</code> sheets differently — no repeating vector here, just six or seven fixed parameter rows sitting above each country's spot‑rate curve:</p>
+      <table>
+        <tr><th>Row</th><th>Label</th><th>Meaning</th></tr>
+        <tr><td>3</td><td><code>AT_30_11_2024_SWP_LLP_20_...</code></td><td>country code + instrument type, encoded in one string</td></tr>
+        <tr><td>4</td><td><code>Coupon_freq</code></td><td>coupon frequency assumption</td></tr>
+        <tr><td>5</td><td><code>LLP</code></td><td>last liquid point (years)</td></tr>
+        <tr><td>6</td><td><code>Convergence</code></td><td>years to converge to the UFR</td></tr>
+        <tr><td>7</td><td><code>UFR</code></td><td>ultimate forward rate</td></tr>
+        <tr><td>8</td><td><code>alpha</code></td><td>Smith‑Wilson convergence speed parameter</td></tr>
+        <tr><td>9</td><td><code>CRA</code></td><td>credit risk adjustment (bps)</td></tr>
+        <tr><td>10</td><td><code>VA</code></td><td>volatility adjustment (bps) — populated only on the with‑VA sheet</td></tr>
+      </table>
+      <p>Row 3 is the interesting one: EIOPA packs the country code <em>and</em> the underlying instrument type into a single string, e.g. <code class="inline">AT_30_11_2024_SWP_LLP_20_EXT_40_UFR_3.30</code>. The extractor splits on underscores and pulls out both pieces:</p>
+<pre><span class="k">def</span> _parse_country_code(code_string):
+    parts = code_string.split(<span class="s">"_"</span>)
+    code = parts[0]
+    <span class="k">if</span> code == <span class="s">"EUR"</span>:
+        code = <span class="s">"EU"</span>  <span class="c"># the euro area block, not a country</span>
+    instrument_type = parts[4] <span class="k">if</span> len(parts) &gt; 4 <span class="k">else</span> <span class="k">None</span>  <span class="c"># SWP / GOV / OIS / PEE</span>
+    <span class="k">return</span> code, instrument_type</pre>
+      <p>Then, for every country column, it reads straight across rows 4–10 and assembles one row per country per curve type — this table is naturally <b>wide</b> (one row, several parameter columns) rather than long, since these are single scalars, not a repeating vector like the Qb data.</p>
+      <div class="callout">
+        <b>Note —</b> on the <code class="inline">no_VA</code> sheet, row 10 (<code class="inline">VA</code>) is genuinely empty for every country — no volatility adjustment is applied there by definition, so this comes through as a null in the output rather than a parsing gap.
+      </div>
+    </section>
+
+    <section id="step4">
+      <div class="step-head">
+        <span class="num">04</span><h2>Saving to CSV without duplicating months</h2>
+        <span class="file">csv_store.py</span>
+      </div>
+      <p>Results are kept in two plain CSV files rather than a database — simplest thing that works, and easy to open in Excel or load into pandas/R directly. The one thing a flat file doesn't give you for free is <b>idempotency</b>: if you re-run November's file, naively appending would just double every row.</p>
+      <p><code class="inline">csv_store.py</code> handles that by treating each <code class="inline">(reference_date, curve_type)</code> pair as a replaceable unit:</p>
+<pre><span class="k">def</span> _upsert_csv(csv_path, new_df):
+    <span class="k">if</span> csv_path.exists():
+        existing = pd.read_csv(csv_path)
+        keys = new_df[[<span class="s">"reference_date"</span>, <span class="s">"curve_type"</span>]].drop_duplicates()
+        merge = existing.merge(keys, on=[<span class="s">"reference_date"</span>, <span class="s">"curve_type"</span>],
+                                how=<span class="s">"left"</span>, indicator=<span class="k">True</span>)
+        existing_kept = existing[merge[<span class="s">"_merge"</span>] == <span class="s">"left_only"</span>]  <span class="c"># drop the old month</span>
+        combined = pd.concat([existing_kept, new_df], ignore_index=<span class="k">True</span>)
+    <span class="k">else</span>:
+        combined = new_df
+    combined.to_csv(csv_path, index=<span class="k">False</span>)  <span class="c"># rewrite the whole file</span>
+    <span class="k">return</span> combined</pre>
+      <p>In plain terms: before writing, it deletes any rows already on disk for the month(s) you're loading, then appends the freshly parsed rows. Run the same file five times and the CSV ends up exactly the same size each time — useful if EIOPA republishes a corrected file for a month you've already loaded.</p>
+    </section>
+
+    <section id="step5">
+      <div class="step-head">
+        <span class="num">05</span><h2>Tying it together</h2>
+        <span class="file">main.py</span>
+      </div>
+      <p>This is the entry point. It accepts either one file pair, or a whole folder to process in one go:</p>
+<pre>python main.py --qb-file EIOPA_RFR_20241130_Qb_SW.xlsx \
+               --ts-file EIOPA_RFR_20241130_Term_Structures.xlsx
+
+<span class="c"># or, for a folder with many months of both files:</span>
+python main.py --input-dir /path/to/eiopa_monthly_downloads</span></pre>
+      <p>For each file pair it: reads the reference date from both filenames and checks they agree (catching an accidental mismatch, e.g. pairing October's Qb file with November's Term Structures), runs both extractors, and saves each result via <code class="inline">csv_store.py</code>. In folder mode, it pairs files up automatically by matching the <code class="inline">EIOPA_RFR_YYYYMMDD_</code> prefix and warns (rather than failing) if one side of a pair is missing.</p>
+    </section>
+
+    <section id="gotchas">
+      <div class="step-head">
+        <h2>Two bugs this caught along the way</h2>
+      </div>
+      <div class="found-it">
+        <b>Half‑year term indices —</b> the first version of <code class="inline">qb_extractor.py</code> cast term indices to <code class="inline">int</code>. That silently merged 0.5→0 and 1.0→1 for the ten countries that use semi‑annual steps, dropping half their rows. Fixed by keeping <code class="inline">term_index</code> as a float end‑to‑end, including in the CSV.
+      </div>
+      <div class="found-it">
+        <b>openpyxl's <code class="inline">read_only=True</code> mode —</b> it's built for reading rows in order, top to bottom. This pipeline instead jumps around a sheet by row and column number, and in read‑only mode that turned out to be quadratic — over 50 seconds just to scan one sheet's header row. Loading the workbook normally (no <code class="inline">read_only</code> flag) does the same job in under a second.
+      </div>
+    </section>
+
+    <section id="outputs">
+      <div class="step-head">
+        <h2>What ends up on disk</h2>
+      </div>
+      <table>
+        <tr><th>File</th><th>Shape</th><th>Columns</th></tr>
+        <tr><td><code>data/qb_vectors.csv</code></td><td>long</td><td><code>reference_date, curve_type, country, term_index, qb_value</code></td></tr>
+        <tr><td><code>data/curve_parameters.csv</code></td><td>wide</td><td><code>reference_date, curve_type, country, instrument_type, coupon_freq, llp, convergence, ufr, alpha, cra, va</code></td></tr>
+      </table>
+      <p>Both are cumulative — every month you run adds its rows onto the same two files, so <code class="inline">curve_parameters.csv</code> naturally becomes a time series once you've run it for a few months in a row.</p>
+    </section>
+
+    <section id="run">
+      <div class="step-head">
+        <h2>Running it yourself</h2>
+      </div>
+      <p>Requires <code class="inline">pandas</code> and <code class="inline">openpyxl</code> (<code class="inline">pip install pandas openpyxl</code>). From inside the project folder:</p>
+<pre>python main.py --qb-file /path/to/EIOPA_RFR_20241130_Qb_SW.xlsx \
+               --ts-file /path/to/EIOPA_RFR_20241130_Term_Structures.xlsx</pre>
+      <p>Output lands in <code class="inline">data/qb_vectors.csv</code> and <code class="inline">data/curve_parameters.csv</code>, created automatically on first run.</p>
+    </section>
+
+    <footer>EIOPA Risk-Free Rate extraction pipeline — internal documentation.</footer>
+  </main>
+</div>
+</body>
+</html>
