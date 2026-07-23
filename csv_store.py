@@ -1,10 +1,11 @@
 """
 CSV persistence for the extracted EIOPA RFR data.
 
-Rather than a database, the full history is kept in two CSV files:
+Rather than a database, the full history is kept in three CSV files:
   - qb_vectors.csv        (reference_date, curve_type, country, term_index, qb_value)
   - curve_parameters.csv  (reference_date, curve_type, country, instrument_type,
                             coupon_freq, llp, convergence, ufr, alpha, cra, va)
+  - yield_curves.csv      (reference_date, curve_type, country, term_index, spot_rate)
 
 Loading is idempotent: if the CSV already contains rows for a given
 (reference_date, curve_type), those rows are dropped and replaced with the
@@ -22,7 +23,7 @@ import pandas as pd
 def _upsert_csv(csv_path: Path, new_df: pd.DataFrame) -> pd.DataFrame:
     """
     Drop any existing rows for the same (reference_date, curve_type), then
-    append new_df and rewrite the CSV. Shared by both output tables.
+    append new_df and rewrite the CSV. Shared by all output tables.
     """
     if new_df.empty:
         return new_df
@@ -57,4 +58,8 @@ def save_qb_vectors(csv_path: Path, df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_curve_parameters(csv_path: Path, df: pd.DataFrame) -> pd.DataFrame:
+    return _upsert_csv(csv_path, df)
+
+
+def save_yield_curves(csv_path: Path, df: pd.DataFrame) -> pd.DataFrame:
     return _upsert_csv(csv_path, df)

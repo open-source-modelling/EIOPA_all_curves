@@ -10,20 +10,27 @@ Usage:
 
 Each run:
   1. Parses the reference date out of the filename.
-  2. Extracts Qb vectors and curve parameters.
-  3. Upserts them into data/qb_vectors.csv and data/curve_parameters.csv
-     (any rows already present for that month/curve get replaced, so
-     re-running is safe and never duplicates rows).
+  2. Extracts Qb vectors, curve parameters, and official yield curves.
+  3. Upserts them into data/qb_vectors.csv, data/curve_parameters.csv,
+     and data/yield_curves.csv (any rows already present for that
+     month/curve get replaced, so re-running is safe and never duplicates).
 """
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from config import OUTPUT_DIR, PARAMS_CSV_PATH, QB_CSV_PATH, extract_reference_date
-from csv_store import save_curve_parameters, save_qb_vectors
+from config import (
+    OUTPUT_DIR,
+    PARAMS_CSV_PATH,
+    QB_CSV_PATH,
+    YIELD_CURVES_CSV_PATH,
+    extract_reference_date,
+)
+from csv_store import save_curve_parameters, save_qb_vectors, save_yield_curves
 from extractors.param_extractor import extract_parameters
 from extractors.qb_extractor import extract_qb_vectors
+from extractors.spot_extractor import extract_yield_curves
 
 
 def process_file_pair(qb_file: Path, ts_file: Path):
@@ -46,6 +53,12 @@ def process_file_pair(qb_file: Path, ts_file: Path):
     params_full = save_curve_parameters(PARAMS_CSV_PATH, params_df)
     print(f"  -> {len(params_df)} rows parsed ({params_df['country'].nunique()} countries); "
           f"{PARAMS_CSV_PATH.name} now has {len(params_full)} rows total")
+
+    print(f"[{ts_date}] extracting yield curves from {ts_file.name} ...")
+    yields_df = extract_yield_curves(str(ts_file), ts_date)
+    yields_full = save_yield_curves(YIELD_CURVES_CSV_PATH, yields_df)
+    print(f"  -> {len(yields_df)} rows parsed ({yields_df['country'].nunique()} countries); "
+          f"{YIELD_CURVES_CSV_PATH.name} now has {len(yields_full)} rows total")
 
 
 def discover_pairs(input_dir: Path) -> list[tuple[Path, Path]]:

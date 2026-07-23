@@ -32,3 +32,4 @@ def extract_reference_date(filename: str) -> str:
 OUTPUT_DIR = Path(__file__).parent / "data"
 QB_CSV_PATH = OUTPUT_DIR / "qb_vectors.csv"
 PARAMS_CSV_PATH = OUTPUT_DIR / "curve_parameters.csv"
+YIELD_CURVES_CSV_PATH = OUTPUT_DIR / "yield_curves.csv"
