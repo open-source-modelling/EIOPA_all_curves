@@ -41,23 +41,29 @@ COUNTRY_CODE_ROW = 3
 FIRST_DATA_COL = 3  # column C; column B holds row labels
 
 
+def _normalise_country(country: str) -> str:
+    """Align Term-Structures codes with Qb sheet labels used elsewhere."""
+    if country == "EUR":
+        return "EU"
+    # EIOPA used GB_… through 2023-04, then UK_…; Qb sheets always label UK.
+    if country == "GB":
+        return "UK"
+    return country
+
+
 def _parse_country_code(code_string: str) -> tuple[str, str | None]:
     """
     Split 'AT_30_11_2024_SWP_LLP_20_EXT_40_UFR_3.30' into
-    ('AT', 'SWP'). The Euro area block is coded 'EUR' -> normalised to 'EU'
-    to match the country code used in the workbook's own 'Parameters' sheet
-    (and the same 'EU' code used in qb_vectors.csv / yield_curves.csv).
+    ('AT', 'SWP'). Also normalises EUR->EU and GB->UK so country codes
+    match qb_vectors.csv / the notebook country list.
     """
     parts = code_string.split("_")
     # Expected shape: CODE_DD_MM_YYYY_INSTRUMENT_...
     if len(parts) <= 4:
-        country = "EU" if parts[0] == "EUR" else parts[0]
-        return country, None
+        return _normalise_country(parts[0]), None
 
     country, _day, _month, _year, instrument, *_rest = parts
-    if country == "EUR":
-        country = "EU"
-    return country, instrument
+    return _normalise_country(country), instrument
 
 
 def _extract_sheet(ws, curve_type: str, reference_date: str) -> pd.DataFrame:

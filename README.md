@@ -30,7 +30,7 @@ All rates and parameters live under `data/`:
 |--------|-------------|
 | `reference_date` | ISO date (`YYYY-MM-DD`) |
 | `curve_type` | `no_VA` or `with_VA` |
-| `country` | Country / currency code (euro area = `EU`) |
+| `country` | Country / currency code (euro area = `EU`, United Kingdom = `UK`) |
 | `term_index` | Maturity in years (typically 1…150) |
 | `spot_rate` | Zero-coupon spot rate as a **decimal** (e.g. `0.02607` = 2.607%) |
 
@@ -47,7 +47,7 @@ Note: `ufr` is stored in **percent** (e.g. `3.45`). Divide by 100 before use in 
 | `term_index` | Observation maturity (float; some markets use 0.5 steps) |
 | `qb_value` | Calibration weight for that maturity |
 
-Country codes are aligned across all three files (`EU` for the euro area).
+Country codes are aligned across all three files (`EU` for the euro area, `UK` for the United Kingdom — older Term-Structures files labelled the latter `GB`).
 
 ## Setup
 

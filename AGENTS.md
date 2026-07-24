@@ -43,7 +43,7 @@ Validation of reconstructed vs official curves: open and run `CHECK_SINGLE_v2.ip
 - Extractors live in `extractors/`; each maps sheet names to `curve_type` `no_VA` / `with_VA`.
 - Prefer layout **detection** over hard-coded Excel rows when EIOPA shifts sheets (see `qb_extractor._find_header_row`).
 - Keep Qb `term_index` as **float** (semi-annual countries use `0.5` steps).
-- Euro-area country code is always `EU` in CSVs (Qb sheet header `EUR` is normalised on extract).
+- Country codes in CSVs match Qb labels: euro area is `EU` (sheet `EUR`); United Kingdom is `UK` (Term-Structures historically used `GB`, normalised on extract).
 - Spot rates are decimals (e.g. `0.02607`), not percentages.
 - `openpyxl.load_workbook(..., data_only=True)`; do **not** use `read_only=True` for Qb (random `.cell()` access is very slow).
 - Pipeline only consumes `*_Qb_SW.xlsx` and `*_Term_Structures.xlsx`. `*_PD_Cod.xlsx` / `*_VA_portfolios.xlsx` in `input/` are unused by `main.py`.

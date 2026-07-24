@@ -13,7 +13,7 @@ each country column holds a spot-rate curve:
 
 Output: a tidy ("long") DataFrame with one row per
 (reference_date, curve_type, country, term_index, spot_rate).
-Country codes follow curve_parameters.csv / qb_vectors.csv (EUR -> EU).
+Country codes follow qb_vectors.csv (EUR -> EU, GB -> UK).
 """
 from __future__ import annotations
 
