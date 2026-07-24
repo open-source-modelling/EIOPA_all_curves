@@ -45,10 +45,8 @@ def _parse_country_code(code_string: str) -> tuple[str, str | None]:
     """
     Split 'AT_30_11_2024_SWP_LLP_20_EXT_40_UFR_3.30' into
     ('AT', 'SWP'). The Euro area block is coded 'EUR' -> normalised to 'EU'
-    to match the country code used in the workbook's own 'Parameters' sheet.
-
-    Note: qb_vectors.csv keeps the Qb sheet label 'EUR' as-is. Joining
-    qb_vectors to curve_parameters on country therefore needs EUR <-> EU mapping.
+    to match the country code used in the workbook's own 'Parameters' sheet
+    (and the same 'EU' code used in qb_vectors.csv / yield_curves.csv).
     """
     parts = code_string.split("_")
     # Expected shape: CODE_DD_MM_YYYY_INSTRUMENT_...

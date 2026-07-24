@@ -63,8 +63,8 @@ def _extract_sheet(ws, curve_type: str, reference_date: str) -> pd.DataFrame:
 
     Only header cells with a string label are countries; the unlabeled columns
     are either the term-index column (one left of the value) or the blank spacer.
-    Country codes are kept as printed (including 'EUR'); curve_parameters.csv
-    remaps EUR -> EU, so join those tables carefully.
+    The Qb sheet labels the euro-area block 'EUR'; we normalise that to 'EU'
+    so it matches curve_parameters.csv / yield_curves.csv.
     """
     header_row = _find_header_row(ws)
 
@@ -77,6 +77,9 @@ def _extract_sheet(ws, curve_type: str, reference_date: str) -> pd.DataFrame:
 
     records = []
     for value_col, country in country_cols.items():
+        # Align with param/spot extractors: EIOPA Qb header says EUR, we store EU.
+        if country == "EUR":
+            country = "EU"
         index_col = value_col - 1  # term index sits one column left of qb_value
         for row in range(header_row + 1, ws.max_row + 1):
             term_index = ws.cell(row=row, column=index_col).value
