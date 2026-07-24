@@ -192,7 +192,7 @@ For interactive checks (plot reconstructed vs official spots), open `CHECK_SINGL
 - Prefer filtering CSVs by `reference_date` / `country` — `yield_curves.csv` and `qb_vectors.csv` are large.
 - Not every country code exists on every date (EIOPA’s country set evolves over time). Always take the country list from the selected month.
 - Raw monthly Excel files also include `*_PD_Cod.xlsx` and `*_VA_portfolios.xlsx`; the pipeline does not ingest those.
-
+- In files `EIOPA_RFR_20230531_Qb_SW.xlsx`,`EIOPA_RFR_20230630_Qb_SW.xlsx`, and `EIOPA_RFR_20230731_Qb_SW.xlsx`; sheet `SW_Qb_with_VA` the headers in row 10 are moved by 1 column. 
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
