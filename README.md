@@ -4,7 +4,7 @@ Python pipeline and historical dataset for [EIOPA](https://www.eiopa.europa.eu/)
 
 Each month EIOPA publishes Excel workbooks with Smith–Wilson calibration vectors (`Qb`), curve parameters (UFR, α, LLP, …), and official spot rates. This repo extracts those releases into tidy CSV history so you can look up or rebuild a yield curve for any covered reference date and country without opening the original spreadsheets.
 
-`qb_vectors.csv` and `curve_parameters.csv` currently cover monthly reference dates from **2014-12-31** through **2026-02-28** (135 months), for both `no_VA` and `with_VA`. Official spots in `yield_curves.csv` are present for the earlier part of that history; for later months, rebuild the curve from \(Qb\) + parameters (Option B below), or re-run the pipeline to extend the spot CSV.
+All three CSV files cover every month from **2014-12-31** through **2026-06-30** (139 months), for both `no_VA` and `with_VA`. To add newer months, see *Refresh / extend the CSVs from Excel* below.
 
 ## Repository layout
 
@@ -16,8 +16,9 @@ Each month EIOPA publishes Excel workbooks with Smith–Wilson calibration vecto
 | `extractors/` | Excel parsers for Qb, parameters, and official spots |
 | `input/` | Monthly EIOPA workbooks (`*_Qb_SW.xlsx`, `*_Term_Structures.xlsx`, …) |
 | `data/` | Long-form CSV outputs (the usable dataset) |
-| `CHECK_SINGLE_v2.ipynb` | Rebuild a curve with Smith–Wilson and compare to official spots |
-| `pipeline_explained.html` | Walkthrough of how the extractors work |
+| `TEST_RECALCULATION_ALL.ipynb` | Rebuild curves with Smith–Wilson and check them against the official spots, for one curve or in bulk |
+| `TEST_RECALCULATION_ALL.pdf` | The same notebook with its outputs, as a PDF |
+| `AGENTS.md` | Guidance for AI coding assistants working on this repo |
 | `requirements.txt` | Python dependencies |
 
 ## Data files
@@ -40,7 +41,7 @@ Includes `instrument_type`, `coupon_freq`, `llp`, `convergence`, `ufr`, `alpha`,
 
 Note: `ufr` is stored in **percent** (e.g. `3.45`). Divide by 100 before use in the Smith–Wilson formula.
 
-### `qb_vectors.csv` — Smith–Wilson calibration vector \(Qb\)
+### `qb_vectors.csv` — Smith–Wilson calibration vector `Qb`
 
 | Column | Description |
 |--------|-------------|
@@ -74,7 +75,7 @@ Expected filenames: `EIOPA_RFR_YYYYMMDD_Qb_SW.xlsx` and `EIOPA_RFR_YYYYMMDD_Term
 
 Pick a monthly `reference_date` that appears in the CSVs, a `curve_type` (`no_VA` or `with_VA`), and one or more country codes (euro area = `EU`). You can either read official published spots or rebuild the curve from Smith–Wilson inputs.
 
-### Option A — Official EIOPA spots (when present in `yield_curves.csv`)
+### Option A — Official EIOPA spots
 
 ```python
 import pandas as pd
@@ -108,7 +109,7 @@ countries = sorted(
 
 ### Option B — Reconstruct with Smith–Wilson (full history, any country)
 
-This is the recommended path for **any historical date** covered by `qb_vectors.csv` / `curve_parameters.csv`. It rebuilds the spot curve from EIOPA’s \(Qb\) vector and \((ufr, \alpha)\), matching `CHECK_SINGLE_v2.ipynb`. The reconstruction follows the same algorithm as the original [Smith & Wilson implementation](https://github.com/open-source-modelling/insurance_python/tree/main/smith_wilson) in `open-source-modelling/insurance_python`.
+This is the recommended path for **any historical date** covered by `qb_vectors.csv` / `curve_parameters.csv`. It rebuilds the spot curve from EIOPA’s `Qb` vector and the `ufr` and `alpha` parameters, matching `TEST_RECALCULATION_ALL.ipynb`. The reconstruction follows the same algorithm as the original [Smith & Wilson implementation](https://github.com/open-source-modelling/insurance_python/tree/main/smith_wilson) in `open-source-modelling/insurance_python`.
 
 ```python
 import numpy as np
@@ -183,16 +184,17 @@ all_curves = pd.concat(
 # Long-form yield curves for all countries on that date
 ```
 
-Typical absolute difference vs published spots (where both exist) is on the order of \(10^{-6}\).
+Typical absolute difference vs published spots (where both exist) is on the order of 10⁻⁶.
 
-For interactive checks (plot reconstructed vs official spots), open `CHECK_SINGLE_v2.ipynb`, set `reference_date_str`, `country`, and `is_va_str`, then run the notebook.
+For interactive checks (plot reconstructed vs official spots), open `TEST_RECALCULATION_ALL.ipynb`, set `reference_date_str`, `country`, and `is_va_str`, then run the notebook.
 
 ## Notes
 
 - Prefer filtering CSVs by `reference_date` / `country` — `yield_curves.csv` and `qb_vectors.csv` are large.
 - Not every country code exists on every date (EIOPA’s country set evolves over time). Always take the country list from the selected month.
 - Raw monthly Excel files also include `*_PD_Cod.xlsx` and `*_VA_portfolios.xlsx`; the pipeline does not ingest those.
-- In files `EIOPA_RFR_20230531_Qb_SW.xlsx`,`EIOPA_RFR_20230630_Qb_SW.xlsx`, and `EIOPA_RFR_20230731_Qb_SW.xlsx`; sheet `SW_Qb_with_VA` the headers in row 10 are moved by 1 column. 
+- In `EIOPA_RFR_20230531_Qb_SW.xlsx`, `EIOPA_RFR_20230630_Qb_SW.xlsx` and `EIOPA_RFR_20230731_Qb_SW.xlsx`, the headers in row 10 of sheet `SW_Qb_with_VA` are shifted by one column.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE).

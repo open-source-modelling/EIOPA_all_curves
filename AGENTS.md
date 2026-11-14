@@ -4,7 +4,7 @@
 
 Python pipeline that extracts EIOPA Risk-Free Rate (RFR) monthly Excel releases into long-form CSV history under `data/`. Applies to the whole repo (single project; no nested `AGENTS.md`).
 
-Sources: `input/EIOPA_RFR_YYYYMMDD_Qb_SW.xlsx` + `input/EIOPA_RFR_YYYYMMDD_Term_Structures.xlsx`. Outputs: `data/qb_vectors.csv`, `data/curve_parameters.csv`, `data/yield_curves.csv`. Validation / Smith-Wilson reconstruction lives in `CHECK_SINGLE_v2.ipynb`. Human-readable pipeline notes: `pipeline_explained.html`.
+Sources: `input/EIOPA_RFR_YYYYMMDD_Qb_SW.xlsx` + `input/EIOPA_RFR_YYYYMMDD_Term_Structures.xlsx`. Outputs: `data/qb_vectors.csv`, `data/curve_parameters.csv`, `data/yield_curves.csv`. Validation / Smith-Wilson reconstruction lives in `TEST_RECALCULATION_ALL.ipynb`. Human-readable documentation: `README.md`.
 
 ### Agent Role
 
@@ -16,16 +16,16 @@ Not allowed: invent dependency files or CI that do not exist; rewrite the storag
 
 ### Build, Test & Validation Commands
 
-No `requirements.txt`, `pyproject.toml`, linter, or automated test suite in this repo. Runtime deps observed: `pandas`, `openpyxl`.
+Dependencies are pinned in `requirements.txt` (`pandas`, `openpyxl`, `numpy`, `matplotlib`). No `pyproject.toml`, linter, or automated test suite.
 
 ```bash
-# Install (unpinned; verify versions locally)
-pip install pandas openpyxl
+# Install
+pip install -r requirements.txt
 
 # Process one month (safe smoke run)
 python main.py --qb-file input/EIOPA_RFR_20241130_Qb_SW.xlsx --ts-file input/EIOPA_RFR_20241130_Term_Structures.xlsx
 
-# Process all paired months in input/ (slow; ~135 pairs; rewrites large CSVs)
+# Process all paired months in input/ (slow; one pair per month since 2014-12; rewrites large CSVs)
 python main.py --input-dir input
 
 # Smoke-test a single extractor
@@ -34,7 +34,7 @@ python extractors/param_extractor.py input/EIOPA_RFR_20241130_Term_Structures.xl
 python extractors/spot_extractor.py input/EIOPA_RFR_20241130_Term_Structures.xlsx
 ```
 
-Validation of reconstructed vs official curves: open and run `CHECK_SINGLE_v2.ipynb` (not a CLI test). Older notebook: `Archive/CHECK_SINGLE.ipynb`.
+Validation of reconstructed vs official curves: open and run `TEST_RECALCULATION_ALL.ipynb` (not a CLI test).
 
 ### Conventions & Patterns
 
@@ -73,10 +73,10 @@ Validation of reconstructed vs official curves: open and run `CHECK_SINGLE_v2.ip
 - No formal branching model documented; keep changes focused and small.
 - Recent commit style is short imperative / descriptive phrases (e.g. `Check for no_VA and after Nov 2015`). Match that: concise, why-focused subject lines.
 - No CI; for PRs describe what was extracted/validated and which month file was used as the smoke sample.
-- There is currently **no** `.gitignore`; do not commit `__pycache__/`, `.ipynb_checkpoints/`, or accidental secrets if a ignore file is added later.
+- `.gitignore` excludes `__pycache__/` and `.ipynb_checkpoints/`; never commit those or secrets.
 - Commit / push only when the user explicitly asks.
 
 ### Additional rules
 
-- No README exists; prefer `pipeline_explained.html` and module docstrings for domain context.
+- `README.md` documents the data files and how to use them; module docstrings give domain context.
 - Keep this file factual: only document commands and conventions that exist in the tree.
