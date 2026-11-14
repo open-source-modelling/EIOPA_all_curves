@@ -1,0 +1,28 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Jupyter autosave copies
+.ipynb_checkpoints/
+
+# Virtual environments and local settings
+.venv/
+venv/
+env/
+.env
+
+# Test and tool caches
+.pytest_cache/
+.mypy_cache/
+
+# Excel lock files created while a workbook in input/ is open
+~$*.xlsx
+
+# Operating system clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor settings
+.vscode/
+.idea/
